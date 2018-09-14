@@ -1,0 +1,30 @@
+import att.comdev.cicd.config.conf
+
+// node used for launching VMs in AF
+def launch_node = 'jenkins-node-launch'
+
+stage ('Release Jenkins slave') {
+
+    println("DELETE_NODENAME: " + DELETE_NODENAME)
+    println("EXCLUDE_NODE_LIST: " + EXCLUDE_NODE_LIST)
+
+    for (exclude_node in EXCLUDE_NODE_LIST) {
+        if (DELETE_NODENAME.equalsIgnoreCase(exclude_node)) {
+            println "$DELETE_NODENAME belongs to list of critical nodes excluded from deletion"
+            error "Cannot delete node $DELETE_NODENAME"
+        }
+    }
+
+    // in AF Jenkins slaves are operated from 'jenkins-node-launch' node, not from 'master'
+    node(launch_node) {
+        jenkins.node_delete(DELETE_NODENAME)
+    }
+    node('master') {
+        jenkins.node_delete(DELETE_NODENAME)
+    }
+}
+stage ('Delete stack') {
+    node(launch_node) {
+        heat.stack_delete(DELETE_NODENAME)
+    }
+}
